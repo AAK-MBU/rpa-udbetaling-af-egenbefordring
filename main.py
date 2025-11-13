@@ -17,14 +17,45 @@ from processes.finalize_process import finalize_process
 from processes.process_item import process_item
 from processes.queue_handler import concurrent_add, retrieve_items_for_queue
 
+logger = logging.getLogger(__name__)
+
+
+# ╔══════════════════════════════════════════════╗
+# ║ 🔥 REMOVE BEFORE DEPLOYMENT (TEMP OVERRIDES) 🔥 ║
+# ╚══════════════════════════════════════════════╝
+## This block handles the workqueue id selection
+# import os
+# from dotenv import load_dotenv
+# load_dotenv()
+# if "--borger_fyldt_22" in sys.argv:
+#     os.environ["ATS_WORKQUEUE_OVERRIDE"] = os.getenv("ATS_WORKQUEUE_ID_BORGER_FYLDT_22")
+
+# elif "--faglig_vurdering_udfoert" in sys.argv:
+#     os.environ["ATS_WORKQUEUE_OVERRIDE"] = os.getenv("ATS_WORKQUEUE_ID_FAGLIG_VURDERING_UDFOERT")
+
+# elif "--aftale_oprettet_i_solteq" in sys.argv:
+#     os.environ["ATS_WORKQUEUE_OVERRIDE"] = os.getenv("ATS_WORKQUEUE_ID_AFTALE_OPRETTET_I_SOLTEQ")
+
+# ### This block disables SSL verification and overrides env vars ###
+# import requests
+# import urllib3
+# urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+# _old_request = requests.Session.request
+# def unsafe_request(self, *args, **kwargs):
+#     kwargs['verify'] = False
+#     return _old_request(self, *args, **kwargs)
+# requests.Session.request = unsafe_request
+# ╔══════════════════════════════════════════════╗
+# ║ 🔥 REMOVE BEFORE DEPLOYMENT (TEMP OVERRIDES) 🔥 ║
+# ╚══════════════════════════════════════════════╝
+
 
 async def populate_queue(workqueue: Workqueue):
     """Populate the workqueue with items to be processed."""
 
-    logger = logging.getLogger(__name__)
     logger.info("Populating workqueue...")
 
-    items_to_queue = retrieve_items_for_queue(logger=logger)
+    items_to_queue = retrieve_items_for_queue()
 
     queue_references = {str(r) for r in ats_functions.get_workqueue_items(workqueue)}
 
@@ -45,10 +76,9 @@ async def populate_queue(workqueue: Workqueue):
 async def process_workqueue(workqueue: Workqueue):
     """Process items from the workqueue."""
 
-    logger = logging.getLogger(__name__)
     logger.info("Processing workqueue...")
 
-    startup(logger=logger)
+    startup()
 
     error_count = 0
 
@@ -99,18 +129,16 @@ async def process_workqueue(workqueue: Workqueue):
                     context=context,
                 )
                 error_count += 1
-                reset(logger=logger)
+                reset()
 
         break
 
     logger.info("Finished processing workqueue.")
-    close(logger=logger)
+    close()
 
 
 async def finalize(workqueue: Workqueue):
     """Finalize process."""
-
-    logger = logging.getLogger(__name__)
 
     logger.info("Finalizing process...")
 
