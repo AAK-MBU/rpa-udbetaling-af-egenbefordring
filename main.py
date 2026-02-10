@@ -26,14 +26,14 @@ logger = logging.getLogger(__name__)
 # ╔══════════════════════════════════════════════╗
 # ║ 🔥 REMOVE BEFORE DEPLOYMENT (TEMP OVERRIDES) 🔥 ║
 # ╚══════════════════════════════════════════════╝
-import requests
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-_old_request = requests.Session.request
-def unsafe_request(self, *args, **kwargs):
-    kwargs['verify'] = False
-    return _old_request(self, *args, **kwargs)
-requests.Session.request = unsafe_request
+# import requests
+# import urllib3
+# urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+# _old_request = requests.Session.request
+# def unsafe_request(self, *args, **kwargs):
+#     kwargs['verify'] = False
+#     return _old_request(self, *args, **kwargs)
+# requests.Session.request = unsafe_request
 # ╔══════════════════════════════════════════════╗
 # ║ 🔥 REMOVE BEFORE DEPLOYMENT (TEMP OVERRIDES) 🔥 ║
 # ╚══════════════════════════════════════════════╝
@@ -75,6 +75,8 @@ async def process_workqueue(workqueue: Workqueue):
         opus_username = opus_creds.get("username")
         opus_password = opus_creds.get("decrypted_password", "")
 
+        os2_api_key = rpa_conn.get_credential("os2_api").get("decrypted_password")
+
     startup()
 
     error_count = 0
@@ -91,7 +93,7 @@ async def process_workqueue(workqueue: Workqueue):
 
                     try:
                         logger.info("Processing item with reference: %s", reference)
-                        process_item(data, reference, browser, headless)
+                        process_item(data, reference, browser, headless, os2_api_key)
 
                         completed_state = CompletedState.completed(
                             "Process completed without exceptions"
@@ -146,10 +148,6 @@ if __name__ == "__main__":
 
     prod_workqueue = ats.workqueue()
     process = ats.process
-
-    ### REMOVE !!! ###
-    prod_workqueue.clear_workqueue()
-    ### REMOVE !!! ###
 
     if "--queue" in sys.argv:
         asyncio.run(populate_queue(prod_workqueue))

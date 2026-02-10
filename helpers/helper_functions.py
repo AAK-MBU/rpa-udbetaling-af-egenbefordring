@@ -3,8 +3,6 @@
 import os
 import logging
 
-import json
-
 import ast
 
 import shutil
@@ -194,6 +192,10 @@ def process_data(df: pd.DataFrame, naeste_agent: str, file_name) -> pd.DataFrame
 
 
 def nan_to_none(value):
+    """
+    Small helper to convert NaN values to None
+    """
+
     return None if pd.isna(value) else value
 
 

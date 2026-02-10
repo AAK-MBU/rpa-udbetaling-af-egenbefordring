@@ -1,11 +1,8 @@
 """Module to handle item processing"""
 # from mbu_rpa_core.exceptions import ProcessError, BusinessError
 
-import sys
 import os
 import logging
-
-from mbu_dev_shared_components.database import RPAConnection
 
 from helpers import outlay_ticket_creation, helper_functions
 
@@ -13,21 +10,8 @@ logger = logging.getLogger(__name__)
 
 DBCONNECTIONSTRING = os.getenv("DBCONNECTIONSTRINGPROD")
 
-RPA_CONN = RPAConnection(db_env="PROD", commit=False)
-with RPA_CONN:
-    OPUS_CREDS = RPA_CONN.get_credential("egenbefordring_udbetaling")
-    OPUS_USERNAME = OPUS_CREDS.get("username")
-    OPUS_PASSWORD = OPUS_CREDS.get("decrypted_password", "")
 
-    OS2_API_KEY = RPA_CONN.get_credential("os2_api").get("decrypted_password")
-
-print(f"opus_username: {OPUS_USERNAME}")
-print(f"opus_password: {OPUS_PASSWORD}")
-
-print(f"OS2_API_KEY: {OS2_API_KEY}")
-
-
-def process_item(item_data: dict, item_reference: str, browser, headless):
+def process_item(item_data: dict, item_reference: str, browser, headless, os2_api_key):
     """Function to handle item processing"""
 
     assert item_data, "Item data is required"
@@ -35,7 +19,7 @@ def process_item(item_data: dict, item_reference: str, browser, headless):
 
     receipts = []
 
-    folder_path, file_content = helper_functions.fetch_receipt(item_data=item_data, os2_api_key=OS2_API_KEY)
+    folder_path, file_content = helper_functions.fetch_receipt(item_data=item_data, os2_api_key=os2_api_key)
 
     receipts.append(file_content)
 

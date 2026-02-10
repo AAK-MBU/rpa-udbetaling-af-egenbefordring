@@ -8,10 +8,6 @@ from io import BytesIO
 
 import pandas as pd
 
-from datetime import datetime, time
-
-from automation_server_client import Workqueue
-
 from mbu_msoffice_integration.sharepoint_class import Sharepoint
 
 from helpers import ats_functions, config, helper_functions
@@ -167,7 +163,7 @@ def delete_file_from_sharepoint(file_name: str, sharepoint: Sharepoint) -> None:
 
         sharepoint.ctx.execute_query()
 
-        print(f"File '{file_name}' has been deleted successfully from SharePoint.")
+        logger.info(f"File '{file_name}' has been deleted successfully from SharePoint.")
 
     except Exception as e:
-        print(f"Error deleting file '{file_name}': {e}")
+        logger.info(f"Error deleting file '{file_name}': {e}")

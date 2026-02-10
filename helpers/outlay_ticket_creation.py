@@ -1,6 +1,5 @@
 """This module contains the logic for creating an outlay ticket in OPUS."""
 
-import sys
 import os
 import time
 
@@ -91,8 +90,6 @@ def handle_opus(item_data, path, browser, headless):
     fill_out_form_and_control(browser=browser, item_data=item_data)
 
     return
-
-    sys.exit()
 
     # logger.info("Pressing 'Opret' to create ticket ...")
     # create_ticket(browser=browser)
@@ -463,7 +460,7 @@ def fill_out_form_and_control(browser, item_data):
     try:
         WebDriverWait(browser, 30).until(
             EC.presence_of_element_located(
-                (By.XPATH, "//*[contains(text(), 'kontrolleret og OK')]")
+                (By.XPATH, "//*[contains(text(), 'kontrolleret og OKss')]")
             )
         )
 
@@ -471,93 +468,7 @@ def fill_out_form_and_control(browser, item_data):
         raise BusinessError(
             "Fejl ved kontrol af udgiftsbilag - 'kontrolleret og OK' blev ikke fundet") from e
 
-    print("\nbilag er kontrolleret ok\n")
-
-
-# def fill_out_form_and_control(browser, item_data):
-#     """
-#     Complete the OPUS form and submit the expense ticket.
-
-#     Steps performed:
-#         1. Navigate into the correct OPUS frames
-#         2. Select the first row of the posting table
-#         3. Fill Artskonto, Beløb, PSP, Posteringstekst using keyboard tabbing
-#         4. Click 'Kontroller' and ensure OPUS reports "OK"
-#         5. Click 'Opret' to submit the ticket
-#     """
-
-#     # ---------------------------------------------------------
-#     # 1. NAVIGATE INTO THE OPUS FORM FRAMES
-#     # ---------------------------------------------------------
-#     browser.switch_to.default_content()
-#     switch_to_frame(browser, "contentAreaFrame")
-#     switch_to_frame(browser, "ivuFrm_page0ivu0")
-
-#     keyboard = Controller()  # used for typing and TAB navigation
-
-#     # ---------------------------------------------------------
-#     # 2. CLICK THE FIRST ROW IN THE POSTING TABLE
-#     # ---------------------------------------------------------
-#     # This focuses the "Artskonto" field in the first line of the table.
-#     # (The long XPath points to row 1 -> column for Artskonto)
-#     first_row_arts_konto_cell = (
-#         "/html/body/table/tbody/tr/td/div/table/tbody/tr/td/div/table/"
-#         "tbody/tr/td/div/table/tbody/tr[2]/td/div/div/table/tbody/tr[2]/td/"
-#         "table/tbody/tr/td/div/div[1]/div/div/div/table/tbody/tr[2]/td/div/"
-#         "span/span[1]/div/span/span[1]/div/div/div/span/span/table/tbody/"
-#         "tr[2]/td/div/table/tbody/tr/td/div/table/tbody/tr[1]/td/table/"
-#         "tbody/tr[2]/td[3]/table/tbody/tr/td/span"
-#     )
-#     wait_and_click(browser, By.XPATH, first_row_arts_konto_cell)
-
-#     # ---------------------------------------------------------
-#     # 3. FILL FIELDS IN THE POSTINGS TABLE
-#     # Using TAB to move between columns
-#     # ---------------------------------------------------------
-
-#     # Artskonto
-#     keyboard.type(item_data["arts_konto"])
-
-#     # Move to 'Beløb' column
-#     press_key(keyboard, Key.tab)
-#     keyboard.type(item_data["beloeb"])
-
-#     # Move to PSP column (requires 3 TABs)
-#     press_key(keyboard, Key.tab)
-#     press_key(keyboard, Key.tab)
-#     press_key(keyboard, Key.tab)
-
-#     # PSP value
-#     keyboard.type(item_data["psp"])
-
-#     # Move to 'Posteringstekst' column
-#     press_key(keyboard, Key.tab)
-#     keyboard.type(item_data["posteringstekst"])
-
-#     time.sleep(1)  # small delay so OPUS can update the row
-
-#     # ---------------------------------------------------------
-#     # 4. CLICK 'KONTROLLER' TO VALIDATE THE TICKET
-#     # ---------------------------------------------------------
-#     kontroller_button_xpath = (
-#         "/html/body/table/tbody/tr/td/div/table/tbody/tr/td/div/table/"
-#         "tbody/tr/td/div/table/tbody/tr[1]/td/div/div[2]/div/div/div/"
-#         "span[4]/div"
-#     )
-#     wait_and_click(browser, By.XPATH, kontroller_button_xpath)
-
-#     time.sleep(4)  # OPUS needs time to run validation
-
-#     # Validation check
-#     kontrol_ok = browser.find_elements(
-#         By.XPATH,
-#         "//*[contains(text(), 'Udgiftsbilag er kontrolleret og OK')]"
-#     )
-
-#     if not kontrol_ok:
-#         raise BusinessError("Fejl ved kontrol af udgiftsbilag.")
-
-#     print("\nbilag er kontrolleret ok\n")
+    logger.info("\nbilag er kontrolleret ok\n")
 
 
 def create_ticket(browser):

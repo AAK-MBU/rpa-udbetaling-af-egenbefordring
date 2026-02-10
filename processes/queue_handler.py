@@ -1,7 +1,5 @@
 """Module to hande queue population"""
 
-import sys
-
 import asyncio
 import json
 import logging
@@ -27,11 +25,7 @@ def retrieve_items_for_queue() -> list[dict]:
     with RPAConnection(db_env="PROD", commit=False) as rpa_conn:
         egenbefordring_procargs = json.loads(rpa_conn.get_constant(constant_name="egenbefordring_procargs").get("value"))
 
-        logger.info(f"Printing egenbefordring process arguents: {egenbefordring_procargs}\n")
-
         naeste_agent = egenbefordring_procargs.get("naeste_agent")
-
-    print(f"naeste_agent: {naeste_agent}")
 
     sharepoint = Sharepoint(**config.SHAREPOINT_KWARGS)
 
@@ -44,7 +38,7 @@ def retrieve_items_for_queue() -> list[dict]:
     approved_df = processed_df[processed_df["is_godkendt"]]
 
     # Loop through each approved row and build queue data
-    for i, (_, row) in enumerate(approved_df.iterrows()):
+    for _, row in approved_df.iterrows():
         row_data = {k: helper_functions.nan_to_none(v) for k, v in row.to_dict().items()}
 
         reference_file_name = str(file_name).replace(".xlsx", "")
@@ -55,9 +49,6 @@ def retrieve_items_for_queue() -> list[dict]:
         data.append(row_data)
 
         references.append(reference)
-
-        if i == 1:
-            break
 
     items = [
         {"reference": ref, "data": d} for ref, d in zip(references, data, strict=True)
