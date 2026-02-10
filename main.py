@@ -7,13 +7,16 @@ import logging
 import sys
 
 from automation_server_client import AutomationServer, Workqueue
+
+from mbu_dev_shared_components.database import RPAConnection
+
 from mbu_rpa_core.exceptions import BusinessError, ProcessError
 from mbu_rpa_core.process_states import CompletedState
 
-from helpers import ats_functions, config
+from helpers import ats_functions, config, outlay_ticket_creation
+
 from processes.application_handler import close, reset, startup
 from processes.error_handling import ErrorContext, handle_error
-from processes.finalize_process import finalize_process
 from processes.process_item import process_item
 from processes.queue_handler import concurrent_add, retrieve_items_for_queue
 
@@ -23,20 +26,6 @@ logger = logging.getLogger(__name__)
 # ╔══════════════════════════════════════════════╗
 # ║ 🔥 REMOVE BEFORE DEPLOYMENT (TEMP OVERRIDES) 🔥 ║
 # ╚══════════════════════════════════════════════╝
-## This block handles the workqueue id selection
-# import os
-# from dotenv import load_dotenv
-# load_dotenv()
-# if "--borger_fyldt_22" in sys.argv:
-#     os.environ["ATS_WORKQUEUE_OVERRIDE"] = os.getenv("ATS_WORKQUEUE_ID_BORGER_FYLDT_22")
-
-# elif "--faglig_vurdering_udfoert" in sys.argv:
-#     os.environ["ATS_WORKQUEUE_OVERRIDE"] = os.getenv("ATS_WORKQUEUE_ID_FAGLIG_VURDERING_UDFOERT")
-
-# elif "--aftale_oprettet_i_solteq" in sys.argv:
-#     os.environ["ATS_WORKQUEUE_OVERRIDE"] = os.getenv("ATS_WORKQUEUE_ID_AFTALE_OPRETTET_I_SOLTEQ")
-
-# ### This block disables SSL verification and overrides env vars ###
 # import requests
 # import urllib3
 # urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -64,7 +53,9 @@ async def populate_queue(workqueue: Workqueue):
         reference = str(item.get("reference") or "")
         if reference and reference in queue_references:
             logger.info(
-                f"Reference: {reference} already in queue. Item: {item} not added"
+                "Reference: %s already in queue. Item: %s not added",
+                reference,
+                item,
             )
         else:
             new_items.append(item)
@@ -78,19 +69,31 @@ async def process_workqueue(workqueue: Workqueue):
 
     logger.info("Processing workqueue...")
 
+    rpa_conn = RPAConnection(db_env="PROD", commit=False)
+    with rpa_conn:
+        opus_creds = rpa_conn.get_credential("egenbefordring_udbetaling")
+        opus_username = opus_creds.get("username")
+        opus_password = opus_creds.get("decrypted_password", "")
+
+        os2_api_key = rpa_conn.get_credential("os2_api").get("decrypted_password")
+
     startup()
 
     error_count = 0
 
     while error_count < config.MAX_RETRY:
+        headless = True
+
+        browser = outlay_ticket_creation.initialize_browser(opus_username=opus_username, opus_password=opus_password, headless=headless)
+
         for item in workqueue:
             try:
                 with item:
                     data, reference = ats_functions.get_item_info(item)
 
                     try:
-                        logger.info(f"Processing item with reference: {reference}")
-                        process_item(data, reference)
+                        logger.info("Processing item with reference: %s", reference)
+                        process_item(data, reference, browser, headless, os2_api_key)
 
                         completed_state = CompletedState.completed(
                             "Process completed without exceptions"
@@ -102,14 +105,15 @@ async def process_workqueue(workqueue: Workqueue):
                     except BusinessError as e:
                         context = ErrorContext(
                             item=item,
-                            action=item.pending_user,
-                            send_mail=False,
+                            action=item.pending_user(str(e)),
+                            send_mail=True,
                             process_name=workqueue.name,
                         )
                         handle_error(
                             error=e,
                             log=logger.info,
                             context=context,
+                            item=item
                         )
 
                     except Exception as e:
@@ -121,12 +125,13 @@ async def process_workqueue(workqueue: Workqueue):
                     item=item,
                     action=item.fail,
                     send_mail=True,
-                    process_name=workqueue.name,
+                    process_name=workqueue.name
                 )
                 handle_error(
                     error=e,
                     log=logger.error,
                     context=context,
+                    item=item
                 )
                 error_count += 1
                 reset()
@@ -135,30 +140,6 @@ async def process_workqueue(workqueue: Workqueue):
 
     logger.info("Finished processing workqueue.")
     close()
-
-
-async def finalize(workqueue: Workqueue):
-    """Finalize process."""
-
-    logger.info("Finalizing process...")
-
-    try:
-        finalize_process()
-        logger.info("Finished finalizing process.")
-
-    except BusinessError as e:
-        handle_error(error=e, log=logger.info)
-
-    except Exception as e:
-        pe = ProcessError(str(e))
-        context = ErrorContext(
-            send_mail=True,
-            process_name=workqueue.name,
-        )
-        handle_error(error=pe, log=logger.error, context=context)
-
-        raise pe from e
-
 
 if __name__ == "__main__":
     ats_functions.init_logger()
@@ -173,8 +154,5 @@ if __name__ == "__main__":
 
     if "--process" in sys.argv:
         asyncio.run(process_workqueue(prod_workqueue))
-
-    if "--finalize" in sys.argv:
-        asyncio.run(finalize(prod_workqueue))
 
     sys.exit(0)
