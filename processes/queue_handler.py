@@ -1,12 +1,18 @@
 """Module to hande queue population"""
 
+import sys
+
 import asyncio
 import json
 import logging
 
 from automation_server_client import Workqueue
 
-from helpers import config
+from mbu_msoffice_integration.sharepoint_class import Sharepoint
+
+from mbu_dev_shared_components.database.connection import RPAConnection
+
+from helpers import config, helper_functions
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +21,43 @@ def retrieve_items_for_queue() -> list[dict]:
     """Function to populate queue"""
     data = []
     references = []
+
+    helper_functions.delete_all_files_in_path(config.PATH)
+
+    with RPAConnection(db_env="PROD", commit=False) as rpa_conn:
+        egenbefordring_procargs = json.loads(rpa_conn.get_constant(constant_name="egenbefordring_procargs").get("value"))
+
+        logger.info(f"Printing egenbefordring process arguents: {egenbefordring_procargs}\n")
+
+        naeste_agent = egenbefordring_procargs.get("naeste_agent")
+
+    print(f"naeste_agent: {naeste_agent}")
+
+    sharepoint = Sharepoint(**config.SHAREPOINT_KWARGS)
+
+    file_name = helper_functions.fetch_files(folder_name=config.FOLDER_NAME, sharepoint=sharepoint)
+
+    data_df = helper_functions.load_excel_data(file_name=file_name, sharepoint=sharepoint)
+
+    processed_df = helper_functions.process_data(data_df, naeste_agent, file_name)
+
+    approved_df = processed_df[processed_df["is_godkendt"]]
+
+    # Loop through each approved row and build queue data
+    for i, (_, row) in enumerate(approved_df.iterrows()):
+        row_data = {k: helper_functions.nan_to_none(v) for k, v in row.to_dict().items()}
+
+        reference_file_name = str(file_name).replace(".xlsx", "")
+
+        # Reference = posteringstekst + unique UUID
+        reference = f"{reference_file_name}_{row_data.get('uuid')}"
+
+        data.append(row_data)
+
+        references.append(reference)
+
+        if i == 1:
+            break
 
     items = [
         {"reference": ref, "data": d} for ref, d in zip(references, data, strict=True)

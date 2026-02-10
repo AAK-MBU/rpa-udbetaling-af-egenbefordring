@@ -13,6 +13,8 @@ from mbu_dev_shared_components.database.connection import RPAConnection
 from mbu_rpa_core.exceptions import BusinessError, ProcessError
 from PIL import ImageGrab
 
+from helpers import helper_functions
+
 
 @dataclass
 class ErrorContext:
@@ -29,6 +31,7 @@ def handle_error(
     error: ProcessError | BusinessError,
     log,
     context: ErrorContext | None = None,
+    item: WorkItem = None
 ) -> None:
     """
     Function to log error.
@@ -42,21 +45,36 @@ def handle_error(
         BusinessError: If a business logic error occurs.
         ProcessError: If a processing error occurs.
     """
+
     if context is None:
         context = ErrorContext()
+
     error_json = json.dumps(error.__dictinfo__())
+
     log_msg = f"Error: {error}"
+
     if context.item:
         log_msg = f"{repr(error)} raised for item: {context.item}. " + log_msg
+
         if context.action:
             context.action(error_json)
+
     log(log_msg)
+
     if context.send_mail:
         send_error_email(
             error=error,
             add_screenshot=context.add_screenshot,
             process_name=context.process_name,
         )
+
+    # Handle the Excel row --> update row with 'x' in behandlet_fejl
+    if item:
+        item_data = item.data["item"]["data"]
+
+        item_reference = item.reference
+
+        helper_functions.handle_post_process(failed=True, item_data=item_data, item_reference=item_reference)
 
 
 def send_error_email(

@@ -10,4 +10,5 @@ disable =
   R0903, # Too few public methods
   R0916, # Too many boolean expressions in if statement
   R0917, # Too many positional arguments
-  W1203 # F-string interpolation in logging
+  W1203, # F-string interpolation in logging
+  W0719 # Too general exception
