@@ -59,7 +59,7 @@ def fetch_run_workqueue_items(file_name: str = ""):
     ATS helper to fetch workqueue items for the current run
     """
 
-    workqueue_name = "bur.egenbefordring.main"
+    workqueue_name = "bur.befordring.udbetaling_af_egenbefordring"
 
     workqueue_url = f"{URL}/workqueues/by_name/{workqueue_name}"
 
