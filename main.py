@@ -81,7 +81,7 @@ async def process_workqueue(workqueue: Workqueue):
     error_count = 0
 
     while error_count < config.MAX_RETRY:
-        headless = True
+        headless = False
 
         browser = outlay_ticket_creation.initialize_browser(opus_username=opus_username, opus_password=opus_password, headless=headless)
 
