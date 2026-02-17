@@ -112,7 +112,7 @@ def update_sharepoint(excel_rows: list, file_name: str, folder_dest: str, failed
 
         upload_folder_to_sharepoint(folder_dest=folder_dest, receipt_folder_name=receipt_folder_name, sharepoint=sharepoint)
 
-    # delete_file_from_sharepoint(file_name=file_name, sharepoint=sharepoint)
+    delete_file_from_sharepoint(file_name=file_name, sharepoint=sharepoint)
 
 
 def upload_folder_to_sharepoint(folder_dest: str, receipt_folder_name: str, sharepoint: Sharepoint) -> None:

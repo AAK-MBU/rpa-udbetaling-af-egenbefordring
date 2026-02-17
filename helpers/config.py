@@ -38,8 +38,8 @@ PATH = "C:\\tmp\\Koerselsgodtgoerelse"
 
 SHAREPOINT_SITE_URL = "https://aarhuskommune.sharepoint.com"
 
-# SHAREPOINT_SITE_NAME = "MBU-RPA-Egenbefordring"
-SHAREPOINT_SITE_NAME = "MBURPA"
+SHAREPOINT_SITE_NAME = "MBU-RPA-Egenbefordring"
+# SHAREPOINT_SITE_NAME = "MBURPA"
 
 DOCUMENT_LIBRARY = "Delte dokumenter"
 
@@ -53,5 +53,5 @@ SHAREPOINT_KWARGS = {
     "document_library": DOCUMENT_LIBRARY,
 }
 
-# FOLDER_NAME = "General/Til udbetaling"
-FOLDER_NAME = "Egenbefordring/Til udbetaling"
+FOLDER_NAME = "General/Til udbetaling"
+# FOLDER_NAME = "Egenbefordring/Til udbetaling"

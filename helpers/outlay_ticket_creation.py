@@ -89,12 +89,10 @@ def handle_opus(item_data, path, browser, headless):
     logger.info("Filling out form and controlling ...")
     fill_out_form_and_control(browser=browser, item_data=item_data)
 
-    return
+    logger.info("Pressing 'Opret' to create ticket ...")
+    create_ticket(browser=browser)
 
-    # logger.info("Pressing 'Opret' to create ticket ...")
-    # create_ticket(browser=browser)
-
-    # logger.info("Successfully created outlay ticket.")
+    logger.info("Successfully created outlay ticket.")
 
 
 def navigate_to_opus(browser):
@@ -448,19 +446,10 @@ def fill_out_form_and_control(browser, item_data):
 
     browser.execute_script("arguments[0].click();", kontroller)
 
-    # ---------------------------------------------------------
-    # 6. WAIT FOR VALIDATION RESULT
-    # ---------------------------------------------------------
-    # WebDriverWait(browser, 30).until(
-    #     EC.presence_of_element_located(
-    #         (By.XPATH, "//*[contains(text(), 'kontrolleret og OK')]")
-    #     )
-    # )
-
     try:
         WebDriverWait(browser, 30).until(
             EC.presence_of_element_located(
-                (By.XPATH, "//*[contains(text(), 'kontrolleret og OKss')]")
+                (By.XPATH, "//*[contains(text(), 'kontrolleret og OK')]")
             )
         )
 
@@ -473,27 +462,50 @@ def fill_out_form_and_control(browser, item_data):
 
 def create_ticket(browser):
     """
-    Helper to press the 'Opret' button and create the ticket
+    Press 'Opret' and verify ticket creation.
+    Headless-safe and SAP-portal-safe.
     """
 
-    # ---------------------------------------------------------
-    # CLICK 'OPRET' TO SUBMIT THE TICKET
-    # ---------------------------------------------------------
+    logger.info("Submitting OPUS ticket...")
+
+    browser.switch_to.default_content()
+    switch_to_frame(browser, "contentAreaFrame")
+    switch_to_frame(browser, "ivuFrm_page0ivu0")
+
     opret_button_xpath = (
         "/html/body/table/tbody/tr/td/div/table/tbody/tr/td/div/table/"
         "tbody/tr/td/div/table/tbody/tr[1]/td/div/div[2]/div/div/div/"
         "span[1]/div"
     )
-    wait_and_click(browser, By.XPATH, opret_button_xpath)
 
-    time.sleep(4)
-
-    # Confirm ticket was created
-    oprettet_ok = browser.find_elements(
-        By.XPATH,
-        "//*[contains(text(), 'er oprettet')]"
+    opret_btn = WebDriverWait(browser, 20).until(
+        EC.presence_of_element_located((By.XPATH, opret_button_xpath))
     )
 
-    if not oprettet_ok:
-        time.sleep(1)
-        raise BusinessError("Fejl ved oprettelse af udgiftsbilag, kontrol OK.")
+    browser.execute_script(
+        "arguments[0].scrollIntoView({block: 'center'});",
+        opret_btn
+    )
+
+    print("fandt opret knap fint")
+
+    # SAP portals respond far more reliably to JS click
+    browser.execute_script("arguments[0].click();", opret_btn)
+
+    logger.info("Waiting for OPUS creation confirmation...")
+
+    try:
+
+        WebDriverWait(browser, 30).until(
+            EC.presence_of_element_located(
+                (By.XPATH, "//*[contains(text(), 'er oprettet')]")
+            )
+        )
+
+    except TimeoutException as e:
+
+        raise BusinessError(
+            "OPUS ticket creation failed — confirmation not detected."
+        ) from e
+
+    logger.info("Ticket created successfully.")
