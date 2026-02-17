@@ -3,6 +3,8 @@
 import os
 import logging
 
+import json
+
 import ast
 
 import shutil
@@ -366,7 +368,7 @@ def fetch_receipt(item_data, os2_api_key):
         error_message = f"Error saving the file from OS2FORMS: {e}"
         raise RuntimeError(error_message) from e
 
-    return new_path, file_content
+    return new_path
 
 
 def remove_attachment_if_exists(folder_path, item_data):
@@ -419,8 +421,8 @@ def send_mail(failed_work_items: bool):
     logger.info("Sending email")
 
     with RPAConnection(db_env="PROD", commit=False) as rpa_conn:
-        # egenbefordring_procargs = json.loads(rpa_conn.get_constant(constant_name="egenbefordring_procargs").get("value"))
-        # email_receivers = egenbefordring_procargs.get("notification_email")
+        egenbefordring_procargs = json.loads(rpa_conn.get_constant(constant_name="egenbefordring_procargs").get("value"))
+        email_receivers = egenbefordring_procargs.get("notification_email")
 
         email_sender = rpa_conn.get_constant("e-mail_noreply").get("value")
 
@@ -451,8 +453,8 @@ def send_mail(failed_work_items: bool):
                   f'er uploadet til <a href="{folder_url}">{folder_dest}-mappen</a></p>')
 
     smtp_util.send_email(
-        receiver="dadj@aarhus.dk",
-        # receiver=email_receivers,
+        # receiver="dadj@aarhus.dk",
+        receiver=email_receivers,
         sender=email_sender,
         subject=email_subject,
         body=email_body,

@@ -53,9 +53,8 @@ async def populate_queue(workqueue: Workqueue):
         reference = str(item.get("reference") or "")
         if reference and reference in queue_references:
             logger.info(
-                "Reference: %s already in queue. Item: %s not added",
+                "Reference: %s already in queue.",
                 reference,
-                item,
             )
         else:
             new_items.append(item)
@@ -86,57 +85,62 @@ async def process_workqueue(workqueue: Workqueue):
 
         browser = outlay_ticket_creation.initialize_browser(opus_username=opus_username, opus_password=opus_password, headless=headless)
 
-        for item in workqueue:
-            try:
-                with item:
-                    data, reference = ats_functions.get_item_info(item)
+        try:
 
-                    try:
-                        logger.info("Processing item with reference: %s", reference)
-                        process_item(data, reference, browser, headless, os2_api_key)
+            for item in workqueue:
+                try:
+                    with item:
+                        data, reference = ats_functions.get_item_info(item)
 
-                        completed_state = CompletedState.completed(
-                            "Process completed without exceptions"
-                        )
-                        item.complete(str(completed_state))
+                        try:
+                            logger.info("Processing item with reference: %s", reference)
+                            process_item(data, reference, browser, headless, os2_api_key)
 
-                        continue
+                            completed_state = CompletedState.completed(
+                                "Process completed without exceptions"
+                            )
+                            item.complete(str(completed_state))
 
-                    except BusinessError as e:
-                        context = ErrorContext(
-                            item=item,
-                            action=item.pending_user(str(e)),
-                            send_mail=True,
-                            process_name=workqueue.name,
-                        )
-                        handle_error(
-                            error=e,
-                            log=logger.info,
-                            context=context,
-                            item=item
-                        )
+                        except BusinessError as e:
+                            context = ErrorContext(
+                                item=item,
+                                action=item.pending_user(str(e)),
+                                send_mail=True,
+                                process_name=workqueue.name,
+                            )
+                            handle_error(
+                                error=e,
+                                log=logger.info,
+                                context=context,
+                                item=item
+                            )
 
-                    except Exception as e:
-                        pe = ProcessError(str(e))
-                        raise pe from e
+                        except Exception as e:
+                            pe = ProcessError(str(e))
+                            raise pe from e
 
-            except ProcessError as e:
-                context = ErrorContext(
-                    item=item,
-                    action=item.fail,
-                    send_mail=True,
-                    process_name=workqueue.name
-                )
-                handle_error(
-                    error=e,
-                    log=logger.error,
-                    context=context,
-                    item=item
-                )
-                error_count += 1
-                reset()
+                except ProcessError as e:
+                    context = ErrorContext(
+                        item=item,
+                        action=item.fail,
+                        send_mail=True,
+                        process_name=workqueue.name
+                    )
+                    handle_error(
+                        error=e,
+                        log=logger.error,
+                        context=context,
+                        item=item
+                    )
+                    error_count += 1
+                    reset()
 
-        break
+            break
+
+        finally:
+            if browser:
+                logger.info("Closing browser...")
+                browser.quit()
 
     logger.info("Finished processing workqueue.")
     close()
