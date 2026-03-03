@@ -80,6 +80,8 @@ def handle_opus(item_data, path, browser, headless):
 
     navigate_to_opus(browser)
 
+    time.sleep(1)
+
     logger.info("Filling form ...")
     fill_form(browser, item_data)
 
@@ -88,6 +90,8 @@ def handle_opus(item_data, path, browser, headless):
 
     logger.info("Filling out form and controlling ...")
     fill_out_form_and_control(browser=browser, item_data=item_data)
+
+    time.sleep(1)
 
     logger.info("Pressing 'Opret' to create ticket ...")
     create_ticket(browser=browser)
@@ -162,7 +166,7 @@ def fill_form(browser, item_data):
     ):
         raise BusinessError("Kreditoren ikke oprettet.")
 
-    time.sleep(3)  # OPUS needs time after “Hent”
+    time.sleep(4)  # OPUS needs time after “Hent”
 
     # ---------------------------------------------------------
     # 4. FILL MAIN FORM FIELDS
