@@ -136,10 +136,11 @@ def process_data(df: pd.DataFrame, naeste_agent: str, file_name) -> pd.DataFrame
 
         barnets_navn = str(row["barnets_navn"])
 
-        month_year = extract_months_and_year(row["test"])
+        koerselsliste = row.get("koerselsliste") or "test"
+
+        month_year = extract_months_and_year(koerselsliste)
         first_name = barnets_navn.split()[0]
         month_year_child_name = f"{month_year}_{first_name}"
-
 
         psp_value = determine_psp_value(skoleliste, row)
 
@@ -203,10 +204,10 @@ def nan_to_none(value):
     return None if pd.isna(value) else value
 
 
-def extract_months_and_year(test_str):
+def extract_months_and_year(koerselsliste):
     """Return month_year in format jan_26."""
 
-    data = ast.literal_eval(test_str)
+    data = ast.literal_eval(koerselsliste)
 
     for entry in data:
         if isinstance(entry, dict) and "dato" in entry:
@@ -218,49 +219,6 @@ def extract_months_and_year(test_str):
             return f"{month_abbr}_{year_short}"
 
     return None
-
-
-# def extract_months_and_year(test_str):
-#     """Extract months and year from the test string."""
-
-#     month_map = {
-#         "January": "Januar",
-#         "February": "Februar",
-#         "March": "Marts",
-#         "April": "April",
-#         "May": "Maj",
-#         "June": "Juni",
-#         "July": "Juli",
-#         "August": "August",
-#         "September": "September",
-#         "October": "Oktober",
-#         "November": "November",
-#         "December": "December",
-#     }
-
-#     data = ast.literal_eval(test_str)
-
-#     months = set()
-
-#     year = None
-
-#     for entry in data:
-#         if isinstance(entry, dict) and "dato" in entry:
-#             date_str = entry["dato"]
-#             date_obj = datetime.strptime(date_str, "%Y-%m-%d")
-
-#             month_name = date_obj.strftime("%B")
-#             months.add(month_map.get(month_name, month_name))
-
-#             year = date_obj.year
-
-#     sorted_months = sorted(months, key=lambda x: list(month_map.values()).index(x))
-
-#     month_str = "/".join(sorted_months)
-
-#     result = f"{month_str} {year}"
-
-#     return result
 
 
 def extract_url_from_attachments(attachments_str: str) -> str:
