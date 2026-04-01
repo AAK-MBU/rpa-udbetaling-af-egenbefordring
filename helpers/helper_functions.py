@@ -136,7 +136,7 @@ def process_data(df: pd.DataFrame, naeste_agent: str, file_name) -> pd.DataFrame
 
         barnets_navn = str(row["barnets_navn"])
 
-        koerselsliste = row.get("koerselsliste") or "test"
+        koerselsliste = row.get("koerselsliste") or row.get("test")
 
         month_year = extract_months_and_year(koerselsliste)
         first_name = barnets_navn.split()[0]
