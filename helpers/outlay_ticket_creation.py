@@ -88,6 +88,9 @@ def handle_opus(item_data, path, browser, headless):
     logger.info("Uploading attachment ...")
     upload_attachment(browser, attachment_path, headless=headless)
 
+    logger.info("Verifying attachment upload ...")
+    verify_attachment_uploaded(browser, attachment_path)
+
     logger.info("Filling out form and controlling ...")
     fill_out_form_and_control(browser=browser, item_data=item_data)
 
@@ -370,6 +373,41 @@ def upload_attachment(browser, attachment_path, headless=False):
 
     # Optional small delay for OPUS to process the uploaded file
     time.sleep(2)
+
+
+def verify_attachment_uploaded(browser, attachment_path):
+    """
+    Verify the kvittering was successfully attached in OPUS after upload.
+
+    Switches back to the main form frame and looks for the filename in the
+    attachment table. Raises BusinessError if not found within the timeout.
+    """
+    browser.switch_to.default_content()
+    switch_to_frame(browser, "contentAreaFrame")
+    switch_to_frame(browser, "ivuFrm_page0ivu0")
+
+    filename = os.path.basename(attachment_path)
+    # OPUS displays the name uppercased and without the file extension
+    name_stem = os.path.splitext(filename)[0].lower()
+
+    attachment_rows_xpath = (
+        "/html/body/table/tbody/tr/td/div/table/tbody/tr/td/div/table/tbody/"
+        "tr/td/div/table/tbody/tr[2]/td/div/div/table/tbody/tr[2]/td/table/"
+        "tbody/tr/td/div/div[1]/div/div/div/table/tbody/tr[1]/td/div/div/"
+        "table/tbody/tr/td[2]/table/tbody/tr/td/div/table/tbody/tr[3]/td/div/"
+        "span/span/div/span/span[1]/table/tbody/tr"
+    )
+
+    rows = WebDriverWait(browser, 15).until(
+        EC.presence_of_all_elements_located((By.XPATH, attachment_rows_xpath))
+    )
+
+    if not any(name_stem in row.text.lower() for row in rows):
+        raise BusinessError(
+            f"Kvittering '{filename}' ikke fundet i vedhæftningslisten efter upload."
+        )
+
+    logger.info("Kvittering verificeret i OPUS: '%s'", filename)
 
 
 def fill_out_form_and_control(browser, item_data):
