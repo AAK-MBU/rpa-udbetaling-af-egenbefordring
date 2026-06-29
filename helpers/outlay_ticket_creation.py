@@ -398,14 +398,17 @@ def verify_attachment_uploaded(browser, attachment_path):
         "span/span/div/span/span[1]/table/tbody/tr"
     )
 
-    rows = WebDriverWait(browser, 15).until(
-        EC.presence_of_all_elements_located((By.XPATH, attachment_rows_xpath))
-    )
-
-    if not any(name_stem in row.text.lower() for row in rows):
+    try:
+        WebDriverWait(browser, 30).until(
+            lambda d: any(
+                name_stem in row.text.lower()
+                for row in d.find_elements(By.XPATH, attachment_rows_xpath)
+            )
+        )
+    except TimeoutException as e:
         raise BusinessError(
             f"Kvittering '{filename}' ikke fundet i vedhæftningslisten efter upload."
-        )
+        ) from e
 
     logger.info("Kvittering verificeret i OPUS: '%s'", filename)
 
