@@ -5,6 +5,12 @@ import os
 # The number of times the robot retries on an error before terminating.
 MAX_RETRY = 3
 
+# The number of times a single workitem retries the OPUS flow (navigate to
+# OPUS, fill form, upload, control) after a transient browser/GUI failure,
+# before the item is marked failed. Not used for BusinessErrors (e.g.
+# duplicate tickets), which are never retried.
+MAX_ITEM_ATTEMPTS = 3
+
 # ----------------------
 # Queue population settings
 # ----------------------

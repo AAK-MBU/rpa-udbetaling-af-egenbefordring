@@ -80,8 +80,6 @@ def handle_opus(item_data, path, browser, headless):
 
     navigate_to_opus(browser)
 
-    time.sleep(1)
-
     logger.info("Filling form ...")
     fill_form(browser, item_data)
 
@@ -149,6 +147,13 @@ def fill_form(browser, item_data):
         root + "tr[2]/td/div/div/table/tbody/tr/td[1]/div/div/table/"
         "tbody/tr[1]/td[2]/div/div/table/tbody/tr/td[1]/span/input"
     )
+
+    # Wait for the form to be fully rendered and interactable, not just
+    # present in the DOM, before filling it out.
+    WebDriverWait(browser, 30).until(
+        EC.element_to_be_clickable((By.XPATH, creditor_input))
+    )
+
     enter_text(browser, By.XPATH, creditor_input, decrypt_cpr(item_data))
 
     # Click “Hent”
@@ -491,16 +496,26 @@ def fill_out_form_and_control(browser, item_data):
 
     browser.execute_script("arguments[0].click();", kontroller)
 
+    def _kontroller_result(driver):
+        if driver.find_elements(By.XPATH, "//*[contains(text(), 'kontrolleret og OK')]"):
+            return "ok"
+
+        if driver.find_elements(By.XPATH, "//*[contains(text(), 'allerede er registr')]"):
+            return "duplicate"
+
+        return False
+
     try:
-        WebDriverWait(browser, 30).until(
-            EC.presence_of_element_located(
-                (By.XPATH, "//*[contains(text(), 'kontrolleret og OK')]")
-            )
-        )
+        result = WebDriverWait(browser, 30).until(_kontroller_result)
 
     except TimeoutException as e:
         raise BusinessError(
             "Fejl ved kontrol af udgiftsbilag - 'kontrolleret og OK' blev ikke fundet") from e
+
+    if result == "duplicate":
+        # Not retryable: the reference/citizen combination already exists in OPUS.
+        raise BusinessError(
+            "Udgiftsbilag kunne ikke kontrolleres - bilaget er allerede registreret (duplikat).")
 
     logger.info("\nbilag er kontrolleret ok\n")
 
