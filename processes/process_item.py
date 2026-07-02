@@ -58,9 +58,10 @@ def handle_opus_with_retry(item_data, folder_path, browser, headless):
             raise
 
         except Exception as e:
-            helper_functions.update_process_status(conn_string=DBCONNECTIONSTRING, form_id=item_data.get("uuid"), status="Failed")
 
             if attempt == config.MAX_ITEM_ATTEMPTS:
+                helper_functions.update_process_status(conn_string=DBCONNECTIONSTRING, form_id=item_data.get("uuid"), status="Failed")
+    
                 raise
 
             logger.warning(
