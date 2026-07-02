@@ -20,6 +20,7 @@ import pandas as pd
 from mbu_dev_shared_components.os2forms import documents
 
 from mbu_dev_shared_components.utils.fernet_encryptor import Encryptor
+from mbu_dev_shared_components.utils.db_stored_procedure_executor import execute_stored_procedure
 from mbu_dev_shared_components.database.connection import RPAConnection
 
 from mbu_msoffice_integration.sharepoint_class import Sharepoint
@@ -258,6 +259,28 @@ def determine_psp_value(skoleliste: str, row: pd.Series) -> str:
 
     # Default PSP value
     return "XG-5240220808-00003"
+
+
+def update_process_status(conn_string: str, form_id: str, status: str):
+    """Function to update journalizing process status in RPA database"""
+    try:
+        logger.info("Updating process status to: %s", status)
+
+        status_params = {
+            "Status": ("str", status),
+            "form_id": ("str", f"{form_id}"),
+        }
+        execute_stored_procedure(
+            connection_string=conn_string,
+            stored_procedure="journalizing.sp_update_status",
+            params=status_params,
+        )
+
+        logger.info("Process status updated successfully.")
+
+    except Exception as e:
+        logger.error("Error updating process status: %s", e)
+        raise RuntimeError("Error updating process status: " + str(e)) from e
 
 
 def get_status_params(journalizing_table: bool = True, form_id: str = ""):

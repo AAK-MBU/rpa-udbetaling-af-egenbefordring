@@ -61,20 +61,20 @@ def handle_error(
 
     log(log_msg)
 
-    if context.send_mail:
-        send_error_email(
-            error=error,
-            add_screenshot=context.add_screenshot,
-            process_name=context.process_name,
-        )
+    # if context.send_mail:
+    #     send_error_email(
+    #         error=error,
+    #         add_screenshot=context.add_screenshot,
+    #         process_name=context.process_name,
+    #     )
 
     # Handle the Excel row --> update row with 'x' in behandlet_fejl
-    if item:
-        item_data = item.data["item"]["data"]
+    # if item:
+    #     item_data = item.data["item"]["data"]
 
-        item_reference = item.reference
+    #     item_reference = item.reference
 
-        helper_functions.handle_post_process(failed=True, item_data=item_data, item_reference=item_reference)
+    #     helper_functions.handle_post_process(failed=True, item_data=item_data, item_reference=item_reference)
 
 
 def send_error_email(
