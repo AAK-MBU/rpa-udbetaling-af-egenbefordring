@@ -403,17 +403,12 @@ def verify_attachment_uploaded(browser, attachment_path):
         "span/span/div/span/span[1]/table/tbody/tr"
     )
 
-    try:
-        WebDriverWait(browser, 30).until(
-            lambda d: any(
-                name_stem in row.text.lower()
-                for row in d.find_elements(By.XPATH, attachment_rows_xpath)
-            )
+    WebDriverWait(browser, 30).until(
+        lambda d: any(
+            name_stem in row.text.lower()
+            for row in d.find_elements(By.XPATH, attachment_rows_xpath)
         )
-    except TimeoutException as e:
-        raise BusinessError(
-            f"Kvittering '{filename}' ikke fundet i vedhæftningslisten efter upload."
-        ) from e
+    )
 
     logger.info("Kvittering verificeret i OPUS: '%s'", filename)
 
@@ -508,9 +503,8 @@ def fill_out_form_and_control(browser, item_data):
     try:
         result = WebDriverWait(browser, 30).until(_kontroller_result)
 
-    except TimeoutException as e:
-        raise BusinessError(
-            "Fejl ved kontrol af udgiftsbilag - 'kontrolleret og OK' blev ikke fundet") from e
+    except TimeoutException:
+        raise
 
     if result == "duplicate":
         # Not retryable: the reference/citizen combination already exists in OPUS.
