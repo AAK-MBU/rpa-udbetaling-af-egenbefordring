@@ -1,6 +1,7 @@
 """This module contains the logic for creating an outlay ticket in OPUS."""
 
 import os
+import re
 import time
 
 import logging
@@ -22,7 +23,12 @@ from mbu_dev_shared_components.utils.fernet_encryptor import Encryptor
 
 from mbu_rpa_core.exceptions import BusinessError
 
-from helpers.ticket_creation_helpers import wait_and_click, enter_text, switch_to_frame
+from helpers.ticket_creation_helpers import (
+    enter_text,
+    replace_text,
+    switch_to_frame,
+    wait_and_click,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -100,15 +106,78 @@ def handle_opus(item_data, path, browser, headless):
     logger.info("Successfully created outlay ticket.")
 
 
-def navigate_to_opus(browser):
-    """Navigate to OPUS page and open required tabs."""
+def navigate_to_bilag_og_fakturaer(browser):
+    """Open the portal and go to Min Økonomi -> Bilag og fakturaer."""
     browser.get("https://portal.kmd.dk/irj/portal")
 
     wait_and_click(browser, By.XPATH, "//div[text()='Min Økonomi']")
 
     wait_and_click(browser, By.XPATH, "//div[text()='Bilag og fakturaer']")
 
+
+def navigate_to_opus(browser):
+    """Navigate to OPUS page and open 'Opret udgiftsbilag'."""
+    navigate_to_bilag_og_fakturaer(browser)
+
     wait_and_click(browser, By.XPATH, "/html/body/div[1]/table/tbody/tr[1]/td/div/div[1]/div[9]/div[2]/span[2]")
+
+
+def count_tickets_registered(browser, registreringsdato: str) -> int:
+    """
+    Search 'Søg andre bilag' for bilag registered on the given date
+    (format dd.mm.yyyy) and return the count from the "N bilag fundet." text.
+
+    The Brugerid filter is prepopulated with the logged-in robot user, so the
+    result only contains bilag created by the robot.
+    """
+
+    navigate_to_bilag_og_fakturaer(browser)
+
+    # Left-hand detail navigation lives in the top-level document.
+    browser.switch_to.default_content()
+    wait_and_click(browser, By.XPATH, "//*[normalize-space(text())='Bilagsforespørgsel']")
+    wait_and_click(browser, By.XPATH, "//*[normalize-space(text())='Søg andre bilag']")
+
+    # The search form lives in the same frames as the ticket form.
+    browser.switch_to.default_content()
+    switch_to_frame(browser, "contentAreaFrame")
+    switch_to_frame(browser, "ivuFrm_page0ivu0")
+
+    registreringsdato_label = "//*[normalize-space(text())='Registreringsdato']"
+
+    # The date inputs have no id/label of their own, so anchor on the label
+    # text: first text input after "Registreringsdato" is 'fra', the first
+    # after the following "Til:" is 'til'.
+    input_filter = "[not(@type='radio') and not(@type='hidden') and not(@type='checkbox')]"
+    fra_xpath = f"({registreringsdato_label}/following::input{input_filter})[1]"
+    til_xpath = (
+        f"({registreringsdato_label}/following::*[starts-with(normalize-space(text()), 'Til')][1]"
+        f"/following::input{input_filter})[1]"
+    )
+
+    replace_text(browser, By.XPATH, fra_xpath, registreringsdato)
+    replace_text(browser, By.XPATH, til_xpath, registreringsdato)
+
+    sog_btn = WebDriverWait(browser, 20).until(
+        EC.presence_of_element_located((By.XPATH, "//*[normalize-space(text())='Søg']"))
+    )
+    browser.execute_script("arguments[0].click();", sog_btn)
+
+    # "N bilag fundet." only appears after Søg has been pressed.
+    result_el = WebDriverWait(browser, 30).until(
+        EC.presence_of_element_located((By.XPATH, "//*[contains(text(), 'bilag fundet')]"))
+    )
+
+    match = re.search(r"([\d.]+)\s+bilag fundet", result_el.text)
+
+    if not match:
+        raise ValueError(f"Could not parse ticket count from OPUS text: {result_el.text!r}")
+
+    count = int(match.group(1).replace(".", ""))
+
+    logger.info("OPUS: '%s' (Registreringsdato %s)", result_el.text.strip(), registreringsdato)
+
+    return count
 
 
 def fill_form(browser, item_data):
@@ -166,15 +235,21 @@ def fill_form(browser, item_data):
     # ---------------------------------------------------------
     # 3. CHECK FOR INVALID CPR ERROR
     # ---------------------------------------------------------
-    errorbox = browser.find_elements(By.ID, "WD0324")
+    # OPUS needs time after “Hent” before the error (if any) is rendered, so
+    # poll for it instead of checking once. On the happy path this wait times
+    # out and doubles as the settle time OPUS needs before filling the form.
+    # Matched on text rather than the generated element ID, which SAP can change.
+    kreditor_error_xpath = "//*[contains(text(), 'Kreditoren kunne ikke oprettes automatisk')]"
 
-    if errorbox and errorbox[0].text == (
-        "Kreditoren kunne ikke oprettes automatisk. "
-        "Det ikke er et SE/CVR eller CPR nummer."
-    ):
+    try:
+        WebDriverWait(browser, 4).until(
+            EC.presence_of_element_located((By.XPATH, kreditor_error_xpath))
+        )
+
         raise BusinessError("Kreditoren ikke oprettet.")
 
-    time.sleep(4)  # OPUS needs time after “Hent”
+    except TimeoutException:
+        pass  # No error shown — creditor was fetched OK
 
     # ---------------------------------------------------------
     # 4. FILL MAIN FORM FIELDS

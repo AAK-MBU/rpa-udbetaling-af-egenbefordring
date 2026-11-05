@@ -67,9 +67,25 @@ def fetch_run_workqueue_items(file_name: str = ""):
 
     workqueue_id = workqueue_respone_json.get("id")
 
-    work_items_url = f"{URL}/workqueues/{workqueue_id}/items?page=1&size=200&search={file_name}"
+    run_workqueue_items = []
 
-    run_workqueue_items = requests.get(url=work_items_url, headers=HEADERS, timeout=10).json()["items"]
+    page = 1
+    size = 200  # max allowed
+
+    while True:
+        work_items_url = f"{URL}/workqueues/{workqueue_id}/items?page={page}&size={size}&search={file_name}"
+
+        response = requests.get(url=work_items_url, headers=HEADERS, timeout=10)
+        response.raise_for_status()
+
+        items = response.json().get("items", [])
+
+        if not items:
+            break
+
+        run_workqueue_items.extend(items)
+
+        page += 1
 
     return run_workqueue_items
 

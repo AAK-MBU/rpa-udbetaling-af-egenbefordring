@@ -5,6 +5,7 @@ import time
 import logging
 
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -40,6 +41,21 @@ def enter_text(browser, by, value, text):
         EC.presence_of_element_located((by, value))
     )
 
+    input_element.send_keys(text)
+
+
+def replace_text(browser, by, value, text):
+    """
+    Replace the contents of an input. Uses select-all + type instead of
+    .clear(), since SAP Web Dynpro does not always register a .clear().
+    """
+
+    input_element = WebDriverWait(browser, 30).until(
+        EC.element_to_be_clickable((by, value))
+    )
+
+    input_element.click()
+    input_element.send_keys(Keys.CONTROL, "a")
     input_element.send_keys(text)
 
 

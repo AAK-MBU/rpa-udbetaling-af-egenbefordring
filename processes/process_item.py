@@ -20,7 +20,7 @@ def process_item(item_data: dict, item_reference: str, browser, headless, os2_ap
     assert item_reference, "Item reference is required"
 
     # Add database update
-    helper_functions.update_process_status(conn_string=DBCONNECTIONSTRING, form_id=item_data.get("uuid"), status="InProgess")
+    helper_functions.update_process_status(conn_string=DBCONNECTIONSTRING, form_id=item_data.get("uuid"), status="InProgress")
 
     folder_path = helper_functions.fetch_receipt(item_data=item_data, os2_api_key=os2_api_key)
 
