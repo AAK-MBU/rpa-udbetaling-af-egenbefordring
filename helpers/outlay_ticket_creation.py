@@ -27,7 +27,6 @@ from helpers.ticket_creation_helpers import (
     enter_text,
     replace_text,
     switch_to_frame,
-    switch_to_frame_containing,
     wait_and_click,
 )
 
@@ -139,10 +138,12 @@ def count_tickets_registered(browser, registreringsdato: str) -> int:
     wait_and_click(browser, By.XPATH, "//*[normalize-space(text())='Bilagsforespørgsel']")
     wait_and_click(browser, By.XPATH, "//*[normalize-space(text())='Søg andre bilag']")
 
-    # The search form is nested several iframes deep; rather than hardcoding
-    # frame IDs, find the frame that holds the Registreringsdato label.
+    # The search form lives in the same frames as the ticket form.
+    browser.switch_to.default_content()
+    switch_to_frame(browser, "contentAreaFrame")
+    switch_to_frame(browser, "ivuFrm_page0ivu0")
+
     registreringsdato_label = "//*[normalize-space(text())='Registreringsdato']"
-    switch_to_frame_containing(browser, By.XPATH, registreringsdato_label)
 
     # The date inputs have no id/label of their own, so anchor on the label
     # text: first text input after "Registreringsdato" is 'fra', the first

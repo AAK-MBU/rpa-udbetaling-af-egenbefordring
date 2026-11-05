@@ -4,11 +4,6 @@ import time
 
 import logging
 
-from selenium.common.exceptions import (
-    NoSuchFrameException,
-    StaleElementReferenceException,
-    TimeoutException,
-)
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
@@ -37,67 +32,6 @@ def switch_to_frame(browser, frame):
     """Switch to the required frames to access the form."""
 
     WebDriverWait(browser, 30).until(EC.frame_to_be_available_and_switch_to_it((By.ID, frame)))
-
-
-def switch_to_frame_containing(browser, by, value, timeout=30, max_depth=6):
-    """
-    Switch into whichever (nested) frame contains the given element.
-
-    Searches depth-first from the top-level document, retrying until the
-    timeout, since SAP portal frames load lazily. Leaves the driver switched
-    into the matching frame and logs the frame path it took, which is handy
-    for learning the frame IDs of a new page.
-    """
-
-    def _search(depth, path):
-        if browser.find_elements(by, value):
-            return path
-
-        if depth >= max_depth:
-            return None
-
-        frame_count = len(browser.find_elements(By.XPATH, "//iframe | //frame"))
-
-        for i in range(frame_count):
-            # Re-query each time: switching frames invalidates old references.
-            frames = browser.find_elements(By.XPATH, "//iframe | //frame")
-
-            if i >= len(frames):
-                break
-
-            frame = frames[i]
-
-            try:
-                frame_label = frame.get_attribute("id") or frame.get_attribute("name") or f"#{i}"
-                browser.switch_to.frame(frame)
-
-            except (StaleElementReferenceException, NoSuchFrameException):
-                continue
-
-            found = _search(depth + 1, path + [frame_label])
-
-            if found is not None:
-                return found
-
-            browser.switch_to.parent_frame()
-
-        return None
-
-    end_time = time.time() + timeout
-
-    while True:
-        browser.switch_to.default_content()
-
-        found_path = _search(0, [])
-
-        if found_path is not None:
-            logger.info("Found %s in frame path: %s", value, " > ".join(found_path) or "<top level>")
-            return found_path
-
-        if time.time() >= end_time:
-            raise TimeoutException(f"No frame contains element {by}={value} after {timeout}s")
-
-        time.sleep(1)
 
 
 def enter_text(browser, by, value, text):
