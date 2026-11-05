@@ -15,6 +15,7 @@ from mbu_rpa_core.process_states import CompletedState
 
 from helpers import ats_functions, config, outlay_ticket_creation
 
+from processes import validate_tickets
 from processes.application_handler import close, reset, startup
 from processes.error_handling import ErrorContext, handle_error
 from processes.process_item import process_item
@@ -148,6 +149,9 @@ async def process_workqueue(workqueue: Workqueue):
 if __name__ == "__main__":
     ats_functions.init_logger()
 
+    # Parse up front so a bad week number fails before --queue/--process run.
+    finalize_week = validate_tickets.parse_week_arg(sys.argv) if "--finalize" in sys.argv else None
+
     ats = AutomationServer.from_environment()
 
     prod_workqueue = ats.workqueue()
@@ -158,5 +162,8 @@ if __name__ == "__main__":
 
     if "--process" in sys.argv:
         asyncio.run(process_workqueue(prod_workqueue))
+
+    if finalize_week is not None:
+        validate_tickets.validate_created_tickets(week=finalize_week)
 
     sys.exit(0)
