@@ -149,8 +149,11 @@ async def process_workqueue(workqueue: Workqueue):
 if __name__ == "__main__":
     ats_functions.init_logger()
 
-    # Parse up front so a bad week number fails before --queue/--process run.
-    finalize_week = validate_tickets.parse_week_arg(sys.argv) if "--finalize" in sys.argv else None
+    finalize_requested = "--finalize" in sys.argv
+
+    # Parse up front so a bad explicit week number fails before --queue/--process run.
+    # None means no week was given and it will be auto-detected.
+    finalize_week = validate_tickets.parse_week_arg(sys.argv) if finalize_requested else None
 
     ats = AutomationServer.from_environment()
 
@@ -160,10 +163,21 @@ if __name__ == "__main__":
     if "--queue" in sys.argv:
         asyncio.run(populate_queue(prod_workqueue))
 
+    # Resolve the week to validate *before* processing: auto-detection looks at
+    # the 'new' items, which are all gone once --process has run.
+    finalize_target = None
+
+    if finalize_requested:
+        if finalize_week is None:
+            finalize_target = validate_tickets.detect_week_from_new_items()
+        else:
+            finalize_target = (finalize_week, None)
+
     if "--process" in sys.argv:
         asyncio.run(process_workqueue(prod_workqueue))
 
-    if finalize_week is not None:
-        validate_tickets.validate_created_tickets(week=finalize_week)
+    if finalize_target is not None:
+        week, year = finalize_target
+        validate_tickets.validate_created_tickets(week=week, year=year)
 
     sys.exit(0)
